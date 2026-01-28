@@ -278,6 +278,17 @@
         title="SoundCloud player"
       ></iframe>
     </div>
+
+    <div id="dzWrap" style="width: 100%; max-width: 640px; display: none;">
+      <iframe
+        id="dzPlayer"
+        width="100%"
+        height="210"
+        frameborder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        title="Deezer player"
+      ></iframe>
+    </div>
   </div>
 
   <audio id="audio" preload="none"></audio>
@@ -288,6 +299,11 @@
         name: 'DNB',
         type: 'soundcloud',
         url: 'https://soundcloud.com/xsilofon/sets/kyky-a'
+      },
+      {
+        name: 'Techno',
+        type: 'deezer',
+        id: '1275756721'
       },
       { name: 'Techno', type: 'stream', url: 'https://jazz-wr11.ice.infomaniak.ch/jazz-wr11-128.mp3' }
     ];
@@ -307,6 +323,8 @@
     const eqToggle = document.getElementById('eqToggle');
     const scWrap = document.getElementById('scWrap');
     const scPlayer = document.getElementById('scPlayer');
+    const dzWrap = document.getElementById('dzWrap');
+    const dzPlayer = document.getElementById('dzPlayer');
 
     let currentStation = 0;
     let isPlaying = false;
@@ -372,12 +390,23 @@
         audio.pause();
         setPlayUI(false);
         scWrap.style.display = 'block';
+        dzWrap.style.display = 'none';
         scPlayer.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(s.url)}&color=%2300ffd1&auto_play=true&show_teaser=false&show_artwork=true&show_comments=false&show_playcount=false`;
+        eqToggle.disabled = true;
+        eqToggle.classList.remove('active');
+      } else if (s.type === 'deezer') {
+        audio.pause();
+        setPlayUI(false);
+        scWrap.style.display = 'none';
+        dzWrap.style.display = 'block';
+        dzPlayer.src = `https://widget.deezer.com/widget/dark/playlist/${encodeURIComponent(s.id)}`;
         eqToggle.disabled = true;
         eqToggle.classList.remove('active');
       } else {
         scPlayer.src = '';
         scWrap.style.display = 'none';
+        dzPlayer.src = '';
+        dzWrap.style.display = 'none';
         audio.src = s.url;
         audio.load();
         setPlayUI(false);
@@ -400,7 +429,7 @@
     }
 
     playBtn.addEventListener('click', () => {
-      if (stations[currentStation].type === 'soundcloud') return;
+      if (stations[currentStation].type !== 'stream') return;
       ensureAudioGraph();
       connectAudioGraph();
       if (audio.paused) {
