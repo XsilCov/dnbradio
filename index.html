@@ -170,6 +170,25 @@
       flex-wrap: wrap;
       justify-content: center;
     }
+    .eq-toggle {
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid #1f2a33;
+      background: linear-gradient(145deg, #0f141b, #1a2230);
+      color: #d7f9ff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 10px rgba(0,255,209,0.12);
+      transition: all 0.2s;
+    }
+    .eq-toggle.active {
+      background: linear-gradient(135deg, #00ffd1 0%, #00a2ff 45%, #ffb000 100%);
+      color: #0b0f14;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.6), 0 0 18px rgba(0,255,209,0.35);
+    }
     .station {
       padding: 12px 24px;
       border-radius: 30px;
@@ -244,6 +263,8 @@
 
     <div class="label" id="stationLabel">Станція: DNB</div>
 
+    <button id="eqToggle" class="eq-toggle" type="button">EQ</button>
+
     <div class="stations" id="stations"></div>
 
     <div id="scWrap" style="width: 100%; max-width: 640px; display: none;">
@@ -283,12 +304,50 @@
     const iconPause = document.getElementById('iconPause');
     const iconVol = document.getElementById('iconVol');
     const iconMute = document.getElementById('iconMute');
+    const eqToggle = document.getElementById('eqToggle');
     const scWrap = document.getElementById('scWrap');
     const scPlayer = document.getElementById('scPlayer');
 
     let currentStation = 0;
     let isPlaying = false;
     let isMuted = false;
+    let eqEnabled = false;
+    let audioContext = null;
+    let sourceNode = null;
+    let eqFilters = [];
+
+    function buildEqFilters(ctx) {
+      const freqs = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+      return freqs.map((freq) => {
+        const f = ctx.createBiquadFilter();
+        f.type = 'peaking';
+        f.frequency.value = freq;
+        f.Q.value = 1;
+        f.gain.value = 0;
+        return f;
+      });
+    }
+
+    function ensureAudioGraph() {
+      if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (!sourceNode) sourceNode = audioContext.createMediaElementSource(audio);
+      if (eqFilters.length === 0) eqFilters = buildEqFilters(audioContext);
+    }
+
+    function connectAudioGraph() {
+      if (!audioContext || !sourceNode) return;
+      sourceNode.disconnect();
+      eqFilters.forEach((f) => f.disconnect());
+      if (eqEnabled) {
+        sourceNode.connect(eqFilters[0]);
+        for (let i = 0; i < eqFilters.length - 1; i++) {
+          eqFilters[i].connect(eqFilters[i + 1]);
+        }
+        eqFilters[eqFilters.length - 1].connect(audioContext.destination);
+      } else {
+        sourceNode.connect(audioContext.destination);
+      }
+    }
 
     function setVolumeUI(value) {
       volumeEl.style.background = `linear-gradient(to right, #9ca3af 0%, #9ca3af ${value}%, rgba(255,255,255,0.3) ${value}%, rgba(255,255,255,0.3) 100%)`;
@@ -314,12 +373,16 @@
         setPlayUI(false);
         scWrap.style.display = 'block';
         scPlayer.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(s.url)}&color=%2300ffd1&auto_play=true&show_teaser=false&show_artwork=true&show_comments=false&show_playcount=false`;
+        eqToggle.disabled = true;
+        eqToggle.classList.remove('active');
       } else {
         scPlayer.src = '';
         scWrap.style.display = 'none';
         audio.src = s.url;
         audio.load();
         setPlayUI(false);
+        eqToggle.disabled = false;
+        connectAudioGraph();
       }
       renderStations();
       stationLabel.textContent = 'Станція: ' + s.name;
@@ -338,6 +401,8 @@
 
     playBtn.addEventListener('click', () => {
       if (stations[currentStation].type === 'soundcloud') return;
+      ensureAudioGraph();
+      connectAudioGraph();
       if (audio.paused) {
         audio.play().then(() => setPlayUI(true)).catch(() => setPlayUI(false));
       } else {
@@ -365,6 +430,14 @@
       const value = Number(e.target.value || 0);
       audio.volume = value / 100;
       setVolumeUI(value);
+    });
+
+    eqToggle.addEventListener('click', () => {
+      if (stations[currentStation].type === 'soundcloud') return;
+      eqEnabled = !eqEnabled;
+      eqToggle.classList.toggle('active', eqEnabled);
+      ensureAudioGraph();
+      connectAudioGraph();
     });
 
     audio.addEventListener('play', () => setPlayUI(true));
