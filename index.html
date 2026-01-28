@@ -371,9 +371,26 @@
     audio.addEventListener('pause', () => setPlayUI(false));
     audio.addEventListener('ended', () => setPlayUI(false));
 
+    function setupAutoReload() {
+      if (location.protocol === 'file:') return;
+      const params = new URLSearchParams(location.search);
+      if (params.get('reload') !== '1') return;
+      let lastTag = null;
+      setInterval(() => {
+        fetch(location.href, { method: 'HEAD', cache: 'no-store' })
+          .then((res) => {
+            const tag = res.headers.get('etag') || res.headers.get('last-modified');
+            if (tag && lastTag && tag !== lastTag) location.reload();
+            if (tag && !lastTag) lastTag = tag;
+          })
+          .catch(() => {});
+      }, 2000);
+    }
+
     setVolumeUI(70);
     audio.volume = 0.7;
     loadStation(0);
+    setupAutoReload();
 
     // ASCII animation
     const ascii = document.getElementById('ascii');
