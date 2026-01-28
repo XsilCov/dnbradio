@@ -31,6 +31,70 @@
       z-index: 0;
       background: transparent;
     }
+    .terminal {
+      position: fixed;
+      left: 24px;
+      top: 24px;
+      width: min(360px, 80vw);
+      height: min(380px, 60vh);
+      background: rgba(10, 12, 16, 0.72);
+      border: 1px solid rgba(0, 255, 209, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      color: #bff6e9;
+      font-family: "Courier New", Courier, monospace;
+      z-index: 2;
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(0, 255, 209, 0.2);
+      color: rgba(191, 246, 233, 0.8);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .terminal-lights {
+      display: flex;
+      gap: 6px;
+    }
+    .terminal-light {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2dd4bf;
+      box-shadow: 0 0 8px rgba(45, 212, 191, 0.9);
+    }
+    .terminal-body {
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.35;
+      overflow: hidden;
+      white-space: pre-wrap;
+      flex: 1;
+    }
+    .terminal-prompt {
+      color: #7dd3fc;
+    }
+    .terminal-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #bff6e9;
+      margin-left: 4px;
+      animation: blink 1s steps(2, start) infinite;
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
     .ascii-wrap {
       position: relative;
       width: 100%;
@@ -234,6 +298,18 @@
     </div>
   </div>
 
+  <aside class="terminal" aria-hidden="true">
+    <div class="terminal-header">
+      <div class="terminal-lights">
+        <span class="terminal-light"></span>
+        <span class="terminal-light"></span>
+        <span class="terminal-light"></span>
+      </div>
+      Assistant Console
+    </div>
+    <div class="terminal-body" id="terminalBody"></div>
+  </aside>
+
   <div class="ui">
     <div class="header">
       <h1>drumNbuss Diagnosis</h1>
@@ -325,6 +401,7 @@
     const scPlayer = document.getElementById('scPlayer');
     const dzWrap = document.getElementById('dzWrap');
     const dzPlayer = document.getElementById('dzPlayer');
+    const terminalBody = document.getElementById('terminalBody');
 
     let currentStation = 0;
     let isPlaying = false;
@@ -489,10 +566,26 @@
       }, 2000);
     }
 
+    function renderTerminal() {
+      if (!terminalBody) return;
+      terminalBody.innerHTML = [
+        '<span class="terminal-prompt">dnbradio@studio:~$</span> status',
+        'player: ready',
+        'mode: ambient',
+        'eq: streams only',
+        'soundcloud: iframe',
+        'deezer: iframe',
+        '',
+        '<span class="terminal-prompt">dnbradio@studio:~$</span> listen --live',
+        '<span class="terminal-cursor"></span>'
+      ].join('\\n');
+    }
+
     setVolumeUI(70);
     audio.volume = 0.7;
     loadStation(0);
     setupAutoReload();
+    renderTerminal();
 
     // ASCII animation
     const ascii = document.getElementById('ascii');
